@@ -1,5 +1,5 @@
 """Direct Generation Inferencer."""
-
+import copy
 import inspect
 import json
 import os
@@ -165,22 +165,32 @@ class GenInferencer(BaseInferencer):
                     prediction = prediction[0]
 
                 if self.dump_res_length:
-                    for i in range(len(prompt)):
-                        prompt[i]['input_length'] = self.model.get_token_len(
-                            prompt[i]['prompt'])
+                    input_length = 0
+                    if isinstance(prompt, str):
+                        input_length = self.model.get_token_len(prompt)
+                    elif isinstance(prompt, list):
+                        for i in range(len(prompt)):
+                            prompt[i][
+                                'input_length'] = self.model.get_token_len(
+                                    prompt[i]['prompt'])
+                            input_length += prompt[i]['input_length']
+
+                    pred_str = copy.deepcopy(prediction)
+                    if isinstance(pred_str, dict):
+                        pred_str = pred_str['prediction']
 
                     if num_return_sequences == 1:
-                        res_length = self.model.get_token_len(prediction)
+                        res_length = self.model.get_token_len(pred_str)
                     else:
                         res_length = [
-                            self.model.get_token_len(pred)
-                            for pred in prediction
+                            self.model.get_token_len(pred) for pred in pred_str
                         ]
                     output_handler.save_results(prompt,
                                                 prediction,
                                                 index,
                                                 gold=gold,
-                                                res_length=res_length)
+                                                res_length=res_length,
+                                                input_length=input_length)
                 else:
                     output_handler.save_results(prompt,
                                                 prediction,
